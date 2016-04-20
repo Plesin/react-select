@@ -2,7 +2,7 @@ import React from 'react';
 import Select from 'react-select';
 
 const CONTRIBUTORS = require('../data/contributors');
-const MAX_CONTRIBUTORS = 6;
+const MAX_CONTRIBUTORS = 10;
 const ASYNC_DELAY = 500;
 
 const Contributors = React.createClass({
@@ -17,6 +17,9 @@ const Contributors = React.createClass({
 		};
 	},
 	onChange (value) {
+		value.forEach(function(item) {
+			item.selected = true;
+		});
 		this.setState({
 			value: value,
 		});
@@ -49,11 +52,25 @@ const Contributors = React.createClass({
 	gotoContributor (value, event) {
 		window.open('https://github.com/' + value.github);
 	},
+	onCheckboxChange (e) {
+		console.log('default', e);
+	},
+	optionRenderer (item) {
+		var isDisabled = typeof item.clearableValue !== 'undefined' && item.clearableValue === false ? 'disabled' : '';
+		return (
+			<li>
+				<input style={{float: 'right'}} type="checkbox" checked={item.default} onChange={this.onCheckboxChange} data-events="stopPropagation"/>
+				<input type="checkbox" checked={item.selected} disabled={ isDisabled } onChange={this.onCheckboxChange}/><label>{item.name}</label>
+			</li>
+		)
+	},
 	render () {
 		return (
 			<div className="section">
 				<h3 className="section-heading">{this.props.label}</h3>
-				<Select.Async multi={this.state.multi} value={this.state.value} onChange={this.onChange} onValueClick={this.gotoContributor} valueKey="github" labelKey="name" loadOptions={this.getContributors} />
+				<Select.Async multi={this.state.multi} value={this.state.value} onChange={this.onChange} onValueClick={this.gotoContributor} valueKey="github" labelKey="name" loadOptions={this.getContributors}
+					optionRenderer={ this.optionRenderer }
+				 />
 				<div className="checkbox-list">
 					<label className="checkbox">
 						<input type="radio" className="checkbox-control" checked={this.state.multi} onChange={this.switchToMulti}/>

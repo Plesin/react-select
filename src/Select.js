@@ -457,10 +457,20 @@ const Select = React.createClass({
 		this.props.onChange(value);
 	},
 
-	selectValue (value) {
+	selectValue (value, e) {
+		var action = e ? e.target.dataset.events : null;
+		if (action && action === 'stopPropagation' || typeof value.clearableValue !== 'undefined' && value.clearableValue === false) {
+			return;
+		}
+		console.log(value, e);
 		this.hasScrolledToOption = false;
+
 		if (this.props.multi) {
-			this.addValue(value);
+			if (value.selected) {
+				this.removeValue(value);
+			} else {
+				this.addValue(value);
+			}
 			this.setState({
 				inputValue: '',
 			});
@@ -476,19 +486,33 @@ const Select = React.createClass({
 
 	addValue (value) {
 		var valueArray = this.getValueArray();
-		this.setValue(valueArray.concat(value));
+
+		if (valueArray.indexOf(value) === -1) {
+			this.setValue(valueArray.concat(value));
+		}
 	},
 
 	popValue () {
 		var valueArray = this.getValueArray();
+		var lastItem, valuesLength;
+
 		if (!valueArray.length) return;
 		if (valueArray[valueArray.length-1].clearableValue === false) return;
-		this.setValue(valueArray.slice(0, valueArray.length - 1));
+
+		valuesLength = valueArray.length;
+		lastItem = valueArray[valuesLength - 1];
+		if (typeof lastItem.selected !== 'undefined') {
+			lastItem.selected = false;
+		}
+		this.setValue(valueArray.slice(0, valuesLength - 1));
 	},
 
 	removeValue (value) {
 		var valueArray = this.getValueArray();
 		this.setValue(valueArray.filter(i => i !== value));
+		if (typeof value.selected !== 'undefined') {
+			value.selected = false;
+		}
 		this.focus();
 	},
 
@@ -823,7 +847,7 @@ const Select = React.createClass({
 
 	render () {
 		let valueArray = this.getValueArray();
-		let options = this._visibleOptions = this.filterOptions(this.props.multi ? valueArray : null);
+		let options = this._visibleOptions = this.filterOptions(this.props.multi ? null : null);
 		let isOpen = this.state.isOpen;
 		if (this.props.multi && !options.length && valueArray.length && !this.state.inputValue) isOpen = false;
 		let focusedOption = this._focusedOption = this.getFocusableOption(valueArray[0]);
