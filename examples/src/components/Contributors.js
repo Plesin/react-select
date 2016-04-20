@@ -5,6 +5,16 @@ const CONTRIBUTORS = require('../data/contributors');
 const MAX_CONTRIBUTORS = 10;
 const ASYNC_DELAY = 500;
 
+const Footer = function() {
+	return (
+		<div>
+			<h3>ahoj pane jak to jde</h3>
+			<a href="cliqr.com">cliqr.com</a><br />
+			<a href="cisco.com">cisco.com</a>
+		</div>
+	);
+};
+
 const Contributors = React.createClass({
 	displayName: 'Contributors',
 	propTypes: {
@@ -66,7 +76,7 @@ const Contributors = React.createClass({
 			<div className="section">
 				<h3 className="section-heading">{this.props.label}</h3>
 				<Select.Async multi={this.state.multi} value={this.state.value} onChange={this.onChange} onValueClick={this.gotoContributor} valueKey="github" labelKey="name" selectedKey="selected" loadOptions={this.getContributors}
-					optionRenderer={ this.optionRenderer }
+					optionRenderer={ this.optionRenderer } menuFooter={ Footer }
 				 />
 				<div className="checkbox-list">
 					<label className="checkbox">

@@ -87,6 +87,8 @@ const Select = React.createClass({
 		selectedKey: React.PropTypes.string,        // path of the selected value in option objects
 		valueRenderer: React.PropTypes.func,        // valueRenderer: function (option) {}
 		wrapperStyle: React.PropTypes.object,       // optional style to apply to the component wrapper
+
+		menuFooter: React.PropTypes.func   			// additional component appended to dropdown menu
 	},
 
 	statics: { Async },
@@ -126,7 +128,8 @@ const Select = React.createClass({
 			tabSelectsValue: true,
 			valueComponent: Value,
 			valueKey: 'value',
-			selectedKey: null
+			selectedKey: null,
+			menuFooter: null
 		};
 	},
 
@@ -863,6 +866,7 @@ const Select = React.createClass({
 						 onScroll={this.handleMenuScroll}
 						 onMouseDown={this.handleMouseDownOnMenu}>
 					{menu}
+					{this.props.menuFooter && this.props.menuFooter()}
 				</div>
 			</div>
 		);
