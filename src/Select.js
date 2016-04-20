@@ -84,6 +84,7 @@ const Select = React.createClass({
 		value: React.PropTypes.any,                 // initial field value
 		valueComponent: React.PropTypes.func,       // value component to render
 		valueKey: React.PropTypes.string,           // path of the label value in option objects
+		selectedKey: React.PropTypes.string,        // path of the selected value in option objects
 		valueRenderer: React.PropTypes.func,        // valueRenderer: function (option) {}
 		wrapperStyle: React.PropTypes.object,       // optional style to apply to the component wrapper
 	},
@@ -125,6 +126,7 @@ const Select = React.createClass({
 			tabSelectsValue: true,
 			valueComponent: Value,
 			valueKey: 'value',
+			selectedKey: null
 		};
 	},
 
@@ -443,6 +445,8 @@ const Select = React.createClass({
 	},
 
 	setValue (value) {
+		var selectedKey = this.props.selectedKey;
+
 		if (this.props.autoBlur){
 			this.blurInput();
 		}
@@ -454,19 +458,32 @@ const Select = React.createClass({
 		if (this.props.simpleValue && value) {
 			value = this.props.multi ? value.map(i => i[this.props.valueKey]).join(this.props.delimiter) : value[this.props.valueKey];
 		}
+
+		if (this.props.multi && this.props.selectedKey) {
+			value.forEach(function(item) {
+				if (typeof item[selectedKey] !== 'undefined') {
+					item[selectedKey] = true;
+				}
+			});
+		}
+
 		this.props.onChange(value);
 	},
 
 	selectValue (value, e) {
 		var action = e ? e.target.dataset.events : null;
+		var selectedKey;
+
 		if (action && action === 'stopPropagation' || typeof value.clearableValue !== 'undefined' && value.clearableValue === false) {
 			return;
 		}
-		console.log(value, e);
+
 		this.hasScrolledToOption = false;
 
 		if (this.props.multi) {
-			if (value.selected) {
+			selectedKey = this.props.selectedKey;
+
+			if (selectedKey && value[selectedKey] !== 'undefined' && value[selectedKey]) {
 				this.removeValue(value);
 			} else {
 				this.addValue(value);
@@ -495,23 +512,29 @@ const Select = React.createClass({
 	popValue () {
 		var valueArray = this.getValueArray();
 		var lastItem, valuesLength;
+		var selectedKey = this.props.selectedKey;
 
 		if (!valueArray.length) return;
 		if (valueArray[valueArray.length-1].clearableValue === false) return;
 
 		valuesLength = valueArray.length;
 		lastItem = valueArray[valuesLength - 1];
-		if (typeof lastItem.selected !== 'undefined') {
-			lastItem.selected = false;
+
+		if (typeof lastItem[selectedKey] !== 'undefined') {
+			lastItem[selectedKey] = false;
 		}
+
 		this.setValue(valueArray.slice(0, valuesLength - 1));
 	},
 
 	removeValue (value) {
 		var valueArray = this.getValueArray();
+		var selectedKey = this.props.selectedKey;
+
 		this.setValue(valueArray.filter(i => i !== value));
-		if (typeof value.selected !== 'undefined') {
-			value.selected = false;
+
+		if (typeof value[selectedKey] !== 'undefined') {
+			value[selectedKey] = false;
 		}
 		this.focus();
 	},
@@ -847,7 +870,8 @@ const Select = React.createClass({
 
 	render () {
 		let valueArray = this.getValueArray();
-		let options = this._visibleOptions = this.filterOptions(this.props.multi ? null : null);
+		let multiSelectOptions = this.props.optionRenderer ? null : valueArray;
+		let options = this._visibleOptions = this.filterOptions(this.props.multi ? multiSelectOptions : null);
 		let isOpen = this.state.isOpen;
 		if (this.props.multi && !options.length && valueArray.length && !this.state.inputValue) isOpen = false;
 		let focusedOption = this._focusedOption = this.getFocusableOption(valueArray[0]);

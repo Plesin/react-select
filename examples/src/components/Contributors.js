@@ -17,9 +17,6 @@ const Contributors = React.createClass({
 		};
 	},
 	onChange (value) {
-		value.forEach(function(item) {
-			item.selected = true;
-		});
 		this.setState({
 			value: value,
 		});
@@ -68,7 +65,7 @@ const Contributors = React.createClass({
 		return (
 			<div className="section">
 				<h3 className="section-heading">{this.props.label}</h3>
-				<Select.Async multi={this.state.multi} value={this.state.value} onChange={this.onChange} onValueClick={this.gotoContributor} valueKey="github" labelKey="name" loadOptions={this.getContributors}
+				<Select.Async multi={this.state.multi} value={this.state.value} onChange={this.onChange} onValueClick={this.gotoContributor} valueKey="github" labelKey="name" selectedKey="selected" loadOptions={this.getContributors}
 					optionRenderer={ this.optionRenderer }
 				 />
 				<div className="checkbox-list">
