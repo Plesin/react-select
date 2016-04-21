@@ -64,7 +64,7 @@ var Async = _react2['default'].createClass({
 		loadOptions: _react2['default'].PropTypes.func.isRequired, // function to call to load options asynchronously
 		loadingPlaceholder: _react2['default'].PropTypes.string, // replaces the placeholder while options are loading
 		minimumInput: _react2['default'].PropTypes.number, // the minimum number of characters that trigger loadOptions
-		noResultsText: _react2['default'].PropTypes.string, // placeholder displayed when there are no matching search results (shared with Select)
+		noResultsText: stringOrNode, // placeholder displayed when there are no matching search results (shared with Select)
 		placeholder: stringOrNode, // field placeholder, displayed when there's no value (shared with Select)
 		searchPromptText: _react2['default'].PropTypes.string, // label to prompt for search input
 		searchingText: _react2['default'].PropTypes.string },
@@ -339,7 +339,8 @@ var Select = _react2['default'].createClass({
 	propTypes: {
 		addLabelText: _react2['default'].PropTypes.string, // placeholder displayed when you want to add a label on a multi-value input
 		allowCreate: _react2['default'].PropTypes.bool, // whether to allow creation of new entries
-		autoBlur: _react2['default'].PropTypes.bool,
+		openOnFocus: _react2['default'].PropTypes.bool, // always open options menu on focus
+		autoBlur: _react2['default'].PropTypes.bool, // automatically blur the component when an option is selected
 		autofocus: _react2['default'].PropTypes.bool, // autofocus the component on mount
 		autosize: _react2['default'].PropTypes.bool, // whether to enable autosizing or not
 		backspaceRemoves: _react2['default'].PropTypes.bool, // whether backspace removes an item if there is no text input
@@ -389,13 +390,17 @@ var Select = _react2['default'].createClass({
 		simpleValue: _react2['default'].PropTypes.bool, // pass the value to onChange as a simple value (legacy pre 1.0 mode), defaults to false
 		style: _react2['default'].PropTypes.object, // optional style to apply to the control
 		tabIndex: _react2['default'].PropTypes.string, // optional tab index of the control
+		tabSelectsValue: _react2['default'].PropTypes.bool, // whether to treat tabbing out while focused to be value selection
 		value: _react2['default'].PropTypes.any, // initial field value
 		valueComponent: _react2['default'].PropTypes.func, // value component to render
 		valueKey: _react2['default'].PropTypes.string, // path of the label value in option objects
+		selectedKey: _react2['default'].PropTypes.string, // path of the selected value in option objects
 		valueRenderer: _react2['default'].PropTypes.func, // valueRenderer: function (option) {}
-		wrapperStyle: _react2['default'].PropTypes.object },
+		wrapperStyle: _react2['default'].PropTypes.object, // optional style to apply to the component wrapper
 
-	// optional style to apply to the component wrapper
+		menuFooter: _react2['default'].PropTypes.func // additional component appended to dropdown menu
+	},
+
 	statics: { Async: _Async2['default'] },
 
 	getDefaultProps: function getDefaultProps() {
@@ -430,8 +435,11 @@ var Select = _react2['default'].createClass({
 			scrollMenuIntoView: true,
 			searchable: true,
 			simpleValue: false,
+			tabSelectsValue: true,
 			valueComponent: _Value2['default'],
-			valueKey: 'value'
+			valueKey: 'value',
+			selectedKey: null,
+			menuFooter: null
 		};
 	},
 
@@ -494,7 +502,7 @@ var Select = _react2['default'].createClass({
 		if (this.props.scrollMenuIntoView && this.refs.menuContainer) {
 			var menuContainerRect = this.refs.menuContainer.getBoundingClientRect();
 			if (window.innerHeight < menuContainerRect.bottom + this.props.menuBuffer) {
-				window.scrollTo(0, window.scrollY + menuContainerRect.bottom + this.props.menuBuffer - window.innerHeight);
+				window.scrollBy(0, menuContainerRect.bottom + this.props.menuBuffer - window.innerHeight);
 			}
 		}
 		if (prevProps.disabled !== this.props.disabled) {
@@ -618,7 +626,7 @@ var Select = _react2['default'].createClass({
 	},
 
 	handleInputFocus: function handleInputFocus(event) {
-		var isOpen = this.state.isOpen || this._openAfterFocus;
+		var isOpen = this.state.isOpen || this._openAfterFocus || this.props.openOnFocus;
 		if (this.props.onFocus) {
 			this.props.onFocus(event);
 		}
@@ -631,6 +639,7 @@ var Select = _react2['default'].createClass({
 
 	handleInputBlur: function handleInputBlur(event) {
 		if (this.refs.menu && document.activeElement.isEqualNode(this.refs.menu)) {
+			this.focus();
 			return;
 		}
 
@@ -668,7 +677,7 @@ var Select = _react2['default'].createClass({
 				return;
 			case 9:
 				// tab
-				if (event.shiftKey || !this.state.isOpen) {
+				if (event.shiftKey || !this.state.isOpen || !this.props.tabSelectsValue) {
 					return;
 				}
 				this.selectFocusedOption();
@@ -764,6 +773,8 @@ var Select = _react2['default'].createClass({
 	setValue: function setValue(value) {
 		var _this = this;
 
+		var selectedKey = this.props.selectedKey;
+
 		if (this.props.autoBlur) {
 			this.blurInput();
 		}
@@ -777,13 +788,36 @@ var Select = _react2['default'].createClass({
 				return i[_this.props.valueKey];
 			}).join(this.props.delimiter) : value[this.props.valueKey];
 		}
+
+		if (this.props.multi && this.props.selectedKey) {
+			value.forEach(function (item) {
+				if (typeof item[selectedKey] !== 'undefined') {
+					item[selectedKey] = true;
+				}
+			});
+		}
+
 		this.props.onChange(value);
 	},
 
-	selectValue: function selectValue(value) {
+	selectValue: function selectValue(value, e) {
+		var action = e ? e.target.dataset.events : null;
+		var selectedKey;
+
+		if (action && action === 'stopPropagation' || typeof value.clearableValue !== 'undefined' && value.clearableValue === false) {
+			return;
+		}
+
 		this.hasScrolledToOption = false;
+
 		if (this.props.multi) {
-			this.addValue(value);
+			selectedKey = this.props.selectedKey;
+
+			if (selectedKey && value[selectedKey] !== 'undefined' && value[selectedKey]) {
+				this.removeValue(value);
+			} else {
+				this.addValue(value);
+			}
 			this.setState({
 				inputValue: ''
 			});
@@ -799,21 +833,41 @@ var Select = _react2['default'].createClass({
 
 	addValue: function addValue(value) {
 		var valueArray = this.getValueArray();
-		this.setValue(valueArray.concat(value));
+
+		if (valueArray.indexOf(value) === -1) {
+			this.setValue(valueArray.concat(value));
+		}
 	},
 
 	popValue: function popValue() {
 		var valueArray = this.getValueArray();
+		var lastItem, valuesLength;
+		var selectedKey = this.props.selectedKey;
+
 		if (!valueArray.length) return;
 		if (valueArray[valueArray.length - 1].clearableValue === false) return;
-		this.setValue(valueArray.slice(0, valueArray.length - 1));
+
+		valuesLength = valueArray.length;
+		lastItem = valueArray[valuesLength - 1];
+
+		if (typeof lastItem[selectedKey] !== 'undefined') {
+			lastItem[selectedKey] = false;
+		}
+
+		this.setValue(valueArray.slice(0, valuesLength - 1));
 	},
 
 	removeValue: function removeValue(value) {
 		var valueArray = this.getValueArray();
+		var selectedKey = this.props.selectedKey;
+
 		this.setValue(valueArray.filter(function (i) {
 			return i !== value;
 		}));
+
+		if (typeof value[selectedKey] !== 'undefined') {
+			value[selectedKey] = false;
+		}
 		this.focus();
 	},
 
@@ -1137,9 +1191,31 @@ var Select = _react2['default'].createClass({
 		}
 	},
 
+	renderOuter: function renderOuter(options, valueArray, focusedOption) {
+		var menu = this.renderMenu(options, valueArray, focusedOption);
+		if (!menu) {
+			return null;
+		}
+
+		return _react2['default'].createElement(
+			'div',
+			{ ref: 'menuContainer', className: 'Select-menu-outer', style: this.props.menuContainerStyle },
+			_react2['default'].createElement(
+				'div',
+				{ ref: 'menu', className: 'Select-menu',
+					style: this.props.menuStyle,
+					onScroll: this.handleMenuScroll,
+					onMouseDown: this.handleMouseDownOnMenu },
+				menu,
+				this.props.menuFooter && this.props.menuFooter()
+			)
+		);
+	},
+
 	render: function render() {
 		var valueArray = this.getValueArray();
-		var options = this._visibleOptions = this.filterOptions(this.props.multi ? valueArray : null);
+		var multiSelectOptions = this.props.optionRenderer ? null : valueArray;
+		var options = this._visibleOptions = this.filterOptions(this.props.multi ? multiSelectOptions : null);
 		var isOpen = this.state.isOpen;
 		if (this.props.multi && !options.length && valueArray.length && !this.state.inputValue) isOpen = false;
 		var focusedOption = this._focusedOption = this.getFocusableOption(valueArray[0]);
@@ -1153,6 +1229,7 @@ var Select = _react2['default'].createClass({
 			'is-searchable': this.props.searchable,
 			'has-value': valueArray.length
 		});
+
 		return _react2['default'].createElement(
 			'div',
 			{ ref: 'wrapper', className: className, style: this.props.wrapperStyle },
@@ -1173,18 +1250,7 @@ var Select = _react2['default'].createClass({
 				this.renderClear(),
 				this.renderArrow()
 			),
-			isOpen ? _react2['default'].createElement(
-				'div',
-				{ ref: 'menuContainer', className: 'Select-menu-outer', style: this.props.menuContainerStyle },
-				_react2['default'].createElement(
-					'div',
-					{ ref: 'menu', className: 'Select-menu',
-						style: this.props.menuStyle,
-						onScroll: this.handleMenuScroll,
-						onMouseDown: this.handleMouseDownOnMenu },
-					this.renderMenu(options, !this.props.multi ? valueArray : null, focusedOption)
-				)
-			) : null
+			isOpen ? this.renderOuter(options, !this.props.multi ? valueArray : null, focusedOption) : null
 		);
 	}
 
