@@ -63,11 +63,14 @@ const Contributors = React.createClass({
 		console.log('default', e);
 	},
 	optionRenderer (item) {
+		const state = this.state;
 		var isDisabled = typeof item.clearableValue !== 'undefined' && item.clearableValue === false ? 'disabled' : '';
+		// when clear all is used, plugin resets value to null
+		const checked = state.value ? state.value.indexOf(item.github) > -1 : false;
 		return (
 			<li>
 				<input style={{float: 'right'}} type="checkbox" checked={item.default} onChange={this.onCheckboxChange} data-events="stopPropagation"/>
-				<input type="checkbox" checked={item.selected} disabled={ isDisabled } onChange={this.onCheckboxChange}/><label>{item.name}</label>
+				<input type="checkbox" checked={checked} disabled={ isDisabled } onChange={this.onCheckboxChange}/><label>{item.name}</label>
 			</li>
 		)
 	},
@@ -75,8 +78,8 @@ const Contributors = React.createClass({
 		return (
 			<div className="section">
 				<h3 className="section-heading">{this.props.label}</h3>
-				<Select.Async multi={this.state.multi} value={this.state.value} onChange={this.onChange} onValueClick={this.gotoContributor} valueKey="github" labelKey="name" selectedKey="selected" loadOptions={this.getContributors}
-					optionRenderer={ this.optionRenderer } menuFooter={ Footer }
+				<Select.Async multi={this.state.multi} value={this.state.value} onChange={this.onChange} onValueClick={this.gotoContributor} valueKey="github" labelKey="name" loadOptions={this.getContributors}
+					optionRenderer={ this.optionRenderer } menuFooter={ Footer } simpleValue={true}
 				 />
 				<div className="checkbox-list">
 					<label className="checkbox">
