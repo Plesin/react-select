@@ -394,7 +394,6 @@ var Select = _react2['default'].createClass({
 		value: _react2['default'].PropTypes.any, // initial field value
 		valueComponent: _react2['default'].PropTypes.func, // value component to render
 		valueKey: _react2['default'].PropTypes.string, // path of the label value in option objects
-		selectedKey: _react2['default'].PropTypes.string, // path of the selected value in option objects
 		valueRenderer: _react2['default'].PropTypes.func, // valueRenderer: function (option) {}
 		wrapperStyle: _react2['default'].PropTypes.object, // optional style to apply to the component wrapper
 
@@ -438,7 +437,6 @@ var Select = _react2['default'].createClass({
 			tabSelectsValue: true,
 			valueComponent: _Value2['default'],
 			valueKey: 'value',
-			selectedKey: null,
 			menuFooter: null
 		};
 	},
@@ -773,8 +771,6 @@ var Select = _react2['default'].createClass({
 	setValue: function setValue(value) {
 		var _this = this;
 
-		var selectedKey = this.props.selectedKey;
-
 		if (this.props.autoBlur) {
 			this.blurInput();
 		}
@@ -788,21 +784,12 @@ var Select = _react2['default'].createClass({
 				return i[_this.props.valueKey];
 			}).join(this.props.delimiter) : value[this.props.valueKey];
 		}
-
-		if (this.props.multi && this.props.selectedKey) {
-			value.forEach(function (item) {
-				if (typeof item[selectedKey] !== 'undefined') {
-					item[selectedKey] = true;
-				}
-			});
-		}
-
 		this.props.onChange(value);
 	},
 
 	selectValue: function selectValue(value, e) {
 		var action = e ? e.target.dataset.events : null;
-		var selectedKey;
+		var valueArray = this.getValueArray();
 
 		if (action && action === 'stopPropagation' || typeof value.clearableValue !== 'undefined' && value.clearableValue === false) {
 			return;
@@ -811,12 +798,10 @@ var Select = _react2['default'].createClass({
 		this.hasScrolledToOption = false;
 
 		if (this.props.multi) {
-			selectedKey = this.props.selectedKey;
-
-			if (selectedKey && value[selectedKey] !== 'undefined' && value[selectedKey]) {
-				this.removeValue(value);
-			} else {
+			if (valueArray.indexOf(value) === -1) {
 				this.addValue(value);
+			} else {
+				this.removeValue(value);
 			}
 			this.setState({
 				inputValue: ''
@@ -842,7 +827,6 @@ var Select = _react2['default'].createClass({
 	popValue: function popValue() {
 		var valueArray = this.getValueArray();
 		var lastItem, valuesLength;
-		var selectedKey = this.props.selectedKey;
 
 		if (!valueArray.length) return;
 		if (valueArray[valueArray.length - 1].clearableValue === false) return;
@@ -850,24 +834,14 @@ var Select = _react2['default'].createClass({
 		valuesLength = valueArray.length;
 		lastItem = valueArray[valuesLength - 1];
 
-		if (typeof lastItem[selectedKey] !== 'undefined') {
-			lastItem[selectedKey] = false;
-		}
-
 		this.setValue(valueArray.slice(0, valuesLength - 1));
 	},
 
 	removeValue: function removeValue(value) {
 		var valueArray = this.getValueArray();
-		var selectedKey = this.props.selectedKey;
-
 		this.setValue(valueArray.filter(function (i) {
 			return i !== value;
 		}));
-
-		if (typeof value[selectedKey] !== 'undefined') {
-			value[selectedKey] = false;
-		}
 		this.focus();
 	},
 
